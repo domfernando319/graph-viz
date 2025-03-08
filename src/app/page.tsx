@@ -1,101 +1,158 @@
-import Image from "next/image";
+'use client';
+import {Stage, Group, Layer, Text, Rect, Line} from 'react-konva';
+import { useState } from 'react';
+import Playground from './components/Playground';
+
+interface IconItem {
+  id: string;
+  x: number;
+  y: number;
+  name: string;
+}
+const AVAILABLE_ICONS = [
+  { type: 'server', name: 'Server' },
+  { type: 'database', name: 'Database' },
+  { type: 'client', name: 'Client' },
+  // Add more icon types as needed
+];
+
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  // Grid configuration
+  const CELL_SIZE = 50;
+  const GRID_WIDTH = 800;
+  const GRID_HEIGHT = 600;
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  
+  
+  // Create grid lines
+  const gridLines = [];
+  
+  // Vertical lines
+  for (let i = 0; i <= GRID_WIDTH; i += CELL_SIZE) {
+    gridLines.push(
+      <Line
+        key={`v${i}`}
+        points={[i, 0, i, GRID_HEIGHT]}
+        stroke="#ddd"
+        strokeWidth={1}
+      />
+    );
+  }
+  
+  // Horizontal lines
+  for (let i = 0; i <= GRID_HEIGHT; i += CELL_SIZE) {
+    gridLines.push(
+      <Line
+        key={`h${i}`}
+        points={[0, i, GRID_WIDTH, i]}
+        stroke="#ddd"
+        strokeWidth={1}
+      />
+    );
+  }
+
+  // Initialize icons state from localStorage if available
+  const [icons, setIcons] = useState<IconItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('canvasIcons');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    const name = e.dataTransfer.getData('name');
+    const stageElement = e.currentTarget.getBoundingClientRect();
+
+    const newIcon: IconItem = {
+      id: Date.now().toString(),
+      x: e.clientX - stageElement.left,
+      y: e.clientY - stageElement.top,
+      name,
+    }
+    console.log('Icon dropped', {name: newIcon.name, coordinates: {x: newIcon.x, y: newIcon.y}, id: newIcon.id})
+    const updatedIcons = [...icons, newIcon];
+    setIcons(updatedIcons);
+    localStorage.setItem('canvasIcons', JSON.stringify(updatedIcons));
+  }
+
+  const [isEditing, setIsEditing] = useState(true);
+  const handleToggleEdit = () => {
+    if (isEditing) {
+      localStorage.setItem('canvasIcons', JSON.stringify(icons));
+    }
+    setIsEditing(!isEditing);
+  }
+
+
+
+  return (
+    <div>
+      <div  className="flex p-4">
+        {/* Icon Menu */}
+        {isEditing && (<div className="w-48 space-y-2">
+          {AVAILABLE_ICONS.map((icon) => (
+            <div
+              key={icon.name}
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData('name', icon.name)}
+              className="p-2 bg-gray-100 rounded cursor-move"
+            >
+              {icon.name}
+            </div>
+          ))}
+        </div>)}
+        <button
+          onClick={handleToggleEdit}
+          className="h-[40px] mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          {isEditing ? 'Done' : 'Edit'}
+        </button>
+        {/* Canvas */}
+        <div 
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleDrop}
+        >
+          <Stage width={GRID_WIDTH} height={GRID_HEIGHT}>
+            <Layer>
+            {gridLines}
+              {icons.map(icon => (
+                <Group
+                  key={icon.id}
+                  x={icon.x}
+                  y={icon.y}
+                  draggable={false}
+                  onMouseEnter={(e) => {
+                    const container = e.target.getStage()?.container();
+                    if (container) container.style.cursor = 'not-allowed';
+                  }}
+                  onMouseLeave={(e) => {
+                    const container = e.target.getStage()?.container();
+                    if(container) container.style.cursor = 'default';
+                  }}
+                >
+                  <Rect
+                    width={40}
+                    height={40}
+                    fill="#666"
+                    cornerRadius={5}
+                  />
+                  <Text
+                    text={icon.name}
+                    fontSize={12}
+                    width={40}
+                    align="center"
+                    y={45}
+                  />
+                </Group>
+              ))}
+            </Layer>
+          </Stage>
+
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+      <Playground/>
     </div>
   );
 }
