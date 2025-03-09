@@ -34,7 +34,7 @@ const Playground = () => {
                 </div>
             </div>
 
-            <div>
+            {/* <div>
                 <label className="block text-sm font-medium text-gray-700">Selection 2</label>
                 <div className="mt-2 space-x-4">
                     <label className="inline-flex items-center">
@@ -46,10 +46,10 @@ const Playground = () => {
                     <span className="ml-2">Option Y</span>
                     </label>
                 </div>
-            </div>
+            </div> */}
 
             <button className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                Submit
+                Run
             </button>
         </div>
     </div>
